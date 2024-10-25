@@ -13,6 +13,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import java.time.Duration;
+import javafx.beans.property.SimpleStringProperty;
 
 
 public class Main extends Application {
@@ -67,7 +68,11 @@ public class Main extends Application {
         TableColumn<Veiculo, String> colunaModelo = new TableColumn<>("Modelo");
         colunaModelo.setCellValueFactory(cellData -> cellData.getValue().modeloProperty());
         TableColumn<Veiculo, String> colunaEntrada = new TableColumn<>("Hora de Entrada");
-        colunaEntrada.setCellValueFactory(cellData -> cellData.getValue().entradaProperty());
+        colunaEntrada.setCellValueFactory(cellData -> {
+            LocalDateTime entrada = cellData.getValue().getEntrada();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            return new SimpleStringProperty(entrada != null ? entrada.format(formatter) : "");
+        });
 
         // Nova coluna para exibir a vaga
         TableColumn<Veiculo, String> colunaVaga = new TableColumn<>("Vaga");
@@ -87,8 +92,9 @@ public class Main extends Application {
 
                     // Encontra uma vaga disponível
                     Vaga vaga = estacionamento.encontrarVagaDisponivel();
+
                     if (vaga != null) {
-                        Veiculo veiculo = new Veiculo(placa, modelo, horaEntrada, String.valueOf(vaga.getNumero()));
+                        Veiculo veiculo = new Veiculo(placa, modelo, agora, String.valueOf(vaga.getNumero()));
                         veiculosEstacionados.add(veiculo);
                         vaga.ocupar(veiculo);
                         placaInput.clear();
@@ -135,7 +141,11 @@ public class Main extends Application {
         TableColumn<Veiculo, String> colunaModelo = new TableColumn<>("Modelo");
         colunaModelo.setCellValueFactory(cellData -> cellData.getValue().modeloProperty());
         TableColumn<Veiculo, String> colunaEntrada = new TableColumn<>("Hora de Entrada");
-        colunaEntrada.setCellValueFactory(cellData -> cellData.getValue().entradaProperty());
+        colunaEntrada.setCellValueFactory(cellData -> {
+            LocalDateTime entrada = cellData.getValue().getEntrada();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            return new SimpleStringProperty(entrada != null ? entrada.format(formatter) : "");
+        });
         TableColumn<Veiculo, String> colunaVaga = new TableColumn<>("Vaga");
         colunaVaga.setCellValueFactory(cellData -> cellData.getValue().vagaProperty());
 
@@ -254,7 +264,8 @@ public class Main extends Application {
         LocalDateTime agora = LocalDateTime.now();
 
         for (Veiculo veiculo : veiculosEstacionados) {
-            if (pertenceAoPeriodo(veiculo.getEntrada(), periodo, agora)) {
+            LocalDateTime entrada = veiculo.getEntrada(); // Retorna LocalDateTime
+            if (pertenceAoPeriodo(entrada, periodo, agora)) {
                 numeroClientes++;
             }
         }
@@ -266,17 +277,17 @@ public class Main extends Application {
         double faturamento = 0.0;
         LocalDateTime agora = LocalDateTime.now();
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"); // Formato correto de data e hora
         for (Veiculo veiculo : veiculosEstacionados) {
-            LocalDateTime entrada = LocalDateTime.parse(veiculo.getEntrada(), formatter); // Conversão correta
+            LocalDateTime entrada = veiculo.getEntrada(); // Já retorna LocalDateTime
             if (pertenceAoPeriodo(entrada, periodo, agora)) {
                 faturamento += calcularPagamento(entrada);
             }
         }
+
         return faturamento;
     }
 
-    private boolean pertenceAoPeriodo(String dataEntrada, String periodo, LocalDateTime agora) {
+    private boolean pertenceAoPeriodo(LocalDateTime entrada, String periodo, LocalDateTime agora) {
         switch (periodo) {
             case "diario":
                 return entrada.isAfter(agora.minusDays(1));

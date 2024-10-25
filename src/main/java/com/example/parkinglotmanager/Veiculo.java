@@ -1,21 +1,22 @@
 package com.example.parkinglotmanager;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import java.time.LocalDateTime;
 
-
 public class Veiculo {
     private StringProperty placa;
     private StringProperty modelo;
-    private StringProperty entrada;
+    private LocalDateTime entrada; // Mudado para LocalDateTime
     private StringProperty vaga;
     private LocalDateTime dataSaida;
 
-    public Veiculo(String placa, String modelo, String entrada, String vaga) {
+    public Veiculo(String placa, String modelo, LocalDateTime entrada, String vaga) {
         this.placa = new SimpleStringProperty(placa);
         this.modelo = new SimpleStringProperty(modelo);
-        this.entrada = new SimpleStringProperty(entrada);
+        this.entrada = entrada; // Agora é LocalDateTime
         this.vaga = new SimpleStringProperty(vaga);
         this.dataSaida = null;
     }
@@ -36,12 +37,13 @@ public class Veiculo {
         return modelo.get();
     }
 
-    public StringProperty entradaProperty() {
+    public LocalDateTime getEntrada() {
         return entrada;
     }
 
-    public String getEntrada() {
-        return entrada.get();
+    // Método para retornar a propriedade entrada
+    public ObjectProperty<LocalDateTime> entradaProperty() {
+        return new SimpleObjectProperty<>(entrada);
     }
 
     public StringProperty vagaProperty() {
