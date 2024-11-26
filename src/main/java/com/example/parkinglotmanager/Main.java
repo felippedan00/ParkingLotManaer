@@ -15,12 +15,13 @@ import javafx.collections.ObservableList;
 import java.time.Duration;
 import javafx.beans.property.SimpleStringProperty;
 
-
 public class Main extends Application {
 
     private ObservableList<Veiculo> veiculosEstacionados = FXCollections.observableArrayList();
     private Scene cenaInicial;
     private Estacionamento estacionamento = new Estacionamento(50); // Estacionamento com 50 vagas
+    private int totalClientes = 0; // Contagem total de clientes que passaram pelo estacionamento
+    private double totalFaturamento = 0.0; // Faturamento acumulado
 
     @Override
     public void start(Stage primaryStage) {
@@ -87,10 +88,6 @@ public class Main extends Application {
             if (!placa.isEmpty() && !modelo.isEmpty()) {
                 if (validarPlaca(placa)) {
                     LocalDateTime agora = LocalDateTime.now();
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-                    String horaEntrada = agora.format(formatter);
-
-                    // Encontra uma vaga disponível
                     Vaga vaga = estacionamento.encontrarVagaDisponivel();
 
                     if (vaga != null) {
@@ -99,6 +96,8 @@ public class Main extends Application {
                         vaga.ocupar(veiculo);
                         placaInput.clear();
                         modeloInput.clear();
+
+                        totalClientes++; // Incrementa o total de clientes
                     } else {
                         System.out.println("Estacionamento cheio.");
                     }
@@ -155,8 +154,7 @@ public class Main extends Application {
         btnBuscar.setOnAction(e -> {
             String placa = placaInput.getText();
             if (!placa.isEmpty()) {
-                estacionamento.registrarSaida(placa);
-                veiculosEstacionados.removeIf(veiculo -> veiculo.getPlaca().equals(placa));
+                registrarSaida(placa);
                 placaInput.clear();
             } else {
                 System.out.println("Placa é obrigatória!");
@@ -179,145 +177,57 @@ public class Main extends Application {
         primaryStage.setScene(cenaSaida);
     }
 
+    private void registrarSaida(String placa) {
+        for (Veiculo veiculo : veiculosEstacionados) {
+            if (veiculo.getPlaca().equals(placa)) {
+                veiculo.registrarSaida(LocalDateTime.now()); // Define a data de saída
+
+                // Calcula o pagamento e acumula no faturamento total
+                double valorAPagar = calcularPagamento(veiculo.getEntrada());
+                totalFaturamento += valorAPagar; // Acumula no faturamento
+
+                // Exibe o valor a pagar
+                Alert alerta = new Alert(Alert.AlertType.INFORMATION);
+                alerta.setTitle("Pagamento");
+                alerta.setHeaderText("Valor a pagar para o veículo com placa " + placa);
+                alerta.setContentText(String.format("Total a pagar: R$ %.2f", valorAPagar));
+                alerta.showAndWait();
+
+                veiculosEstacionados.remove(veiculo); // Remove o veículo da lista de estacionados
+                System.out.println("Veículo saiu: " + veiculo.getPlaca());
+                return;
+            }
+        }
+        System.out.println("Veículo não encontrado.");
+    }
+
     private void mostrarTelaResumo(Stage primaryStage) {
-// Implementação da tela de resumo
         Label labelResumo = new Label("Resumo de Faturamento");
         Label labelNumeroClientes = new Label("Número de Clientes:");
         Label labelFaturamento = new Label("Faturamento:");
-        TextField campoClientes = new TextField();
+        TextField campoClientes = new TextField(String.valueOf(totalClientes)); // Define o total de clientes
         campoClientes.setEditable(false); // Apenas leitura
-        TextField campoFaturamento = new TextField();
+        TextField campoFaturamento = new TextField(String.format("R$ %.2f", totalFaturamento)); // Exibe o faturamento total
         campoFaturamento.setEditable(false); // Apenas leitura
-        Button btnDiario = new Button("Diário");
-        Button btnSemanal = new Button("Semanal");
-        Button btnMensal = new Button("Mensal");
-        Button btnTrimestral = new Button("Trimestral");
-        Button btnSemestral = new Button("Semestral");
-        Button btnAnual = new Button("Anual");
         Button btnVoltar = new Button("Voltar");
-
-        // Layout dos botões de período
-        HBox botoesPeriodo = new HBox(10, btnDiario, btnSemanal, btnMensal, btnTrimestral, btnSemestral, btnAnual);
-        botoesPeriodo.setAlignment(Pos.CENTER);
-
-        VBox layoutResumo = new VBox(10, labelResumo, botoesPeriodo, labelNumeroClientes, campoClientes, labelFaturamento, campoFaturamento);
-        layoutResumo.setAlignment(Pos.CENTER);
 
         BorderPane layoutResumoTela = new BorderPane();
         layoutResumoTela.setTop(btnVoltar);
-        layoutResumoTela.setCenter(layoutResumo);
+        layoutResumoTela.setCenter(new VBox(10, labelResumo, labelNumeroClientes, campoClientes, labelFaturamento, campoFaturamento));
         BorderPane.setAlignment(btnVoltar, Pos.TOP_LEFT);
 
         Scene cenaResumo = new Scene(layoutResumoTela, 600, 400);
         primaryStage.setScene(cenaResumo);
 
-        // Ação do botão voltar
         btnVoltar.setOnAction(e -> primaryStage.setScene(cenaInicial));
-
-        // Ações dos botões de período
-        btnDiario.setOnAction(e -> {
-            int numClientes = calcularNumeroClientes("diario");
-            double faturamento = calcularFaturamento("diario");
-            campoClientes.setText(String.valueOf(numClientes));
-            campoFaturamento.setText(String.format("R$ %.2f", faturamento));
-        });
-
-        btnSemanal.setOnAction(e -> {
-            int numClientes = calcularNumeroClientes("semanal");
-            double faturamento = calcularFaturamento("semanal");
-            campoClientes.setText(String.valueOf(numClientes));
-            campoFaturamento.setText(String.format("R$ %.2f", faturamento));
-        });
-
-        btnMensal.setOnAction(e -> {
-            int numClientes = calcularNumeroClientes("mensal");
-            double faturamento = calcularFaturamento("mensal");
-            campoClientes.setText(String.valueOf(numClientes));
-            campoFaturamento.setText(String.format("R$ %.2f", faturamento));
-        });
-
-        btnTrimestral.setOnAction(e -> {
-            int numClientes = calcularNumeroClientes("trimestral");
-            double faturamento = calcularFaturamento("trimestral");
-            campoClientes.setText(String.valueOf(numClientes));
-            campoFaturamento.setText(String.format("R$ %.2f", faturamento));
-        });
-
-        btnSemestral.setOnAction(e -> {
-            int numClientes = calcularNumeroClientes("semestral");
-            double faturamento = calcularFaturamento("semestral");
-            campoClientes.setText(String.valueOf(numClientes));
-            campoFaturamento.setText(String.format("R$ %.2f", faturamento));
-        });
-
-        btnAnual.setOnAction(e -> {
-            int numClientes = calcularNumeroClientes("anual");
-            double faturamento = calcularFaturamento("anual");
-            campoClientes.setText(String.valueOf(numClientes));
-            campoFaturamento.setText(String.format("R$ %.2f", faturamento));
-        });
-    }
-
-    // Métodos para calcular o número de clientes e faturamento
-    private int calcularNumeroClientes(String periodo) {
-        int numeroClientes = 0;
-        LocalDateTime agora = LocalDateTime.now();
-
-        for (Veiculo veiculo : veiculosEstacionados) {
-            LocalDateTime entrada = veiculo.getEntrada(); // Retorna LocalDateTime
-            if (pertenceAoPeriodo(entrada, periodo, agora)) {
-                numeroClientes++;
-            }
-        }
-
-        return numeroClientes;
-    }
-
-    private double calcularFaturamento(String periodo) {
-        double faturamento = 0.0;
-        LocalDateTime agora = LocalDateTime.now();
-
-        for (Veiculo veiculo : veiculosEstacionados) {
-            LocalDateTime entrada = veiculo.getEntrada(); // Já retorna LocalDateTime
-            if (pertenceAoPeriodo(entrada, periodo, agora)) {
-                faturamento += calcularPagamento(entrada);
-            }
-        }
-
-        return faturamento;
-    }
-
-    private boolean pertenceAoPeriodo(LocalDateTime entrada, String periodo, LocalDateTime agora) {
-        switch (periodo) {
-            case "diario":
-                return entrada.isAfter(agora.minusDays(1));
-            case "semanal":
-                return entrada.isAfter(agora.minusWeeks(1));
-            case "mensal":
-                return entrada.isAfter(agora.minusMonths(1));
-            case "trimestral":
-                return entrada.isAfter(agora.minusMonths(3));
-            case "semestral":
-                return entrada.isAfter(agora.minusMonths(6));
-            case "anual":
-                return entrada.isAfter(agora.minusYears(1));
-            default:
-                return false;
-        }
     }
 
     private double calcularPagamento(LocalDateTime horaEntrada) {
-        long minutos = Duration.between(horaEntrada, LocalDateTime.now()).toMinutes();
-        if (minutos <= 15) {
-            return 0.0;
-        } else if (minutos <= 30) {
-            return 7.0;
-        } else if (minutos <= 60) {
-            return 10.0;
-        } else {
-            return 15.0;
-        }
+        long segundos = Duration.between(horaEntrada, LocalDateTime.now()).getSeconds();
+        double taxaPorSegundo = 0.004; // Exemplo de taxa em reais por segundo
+        return segundos * taxaPorSegundo;
     }
+
     public static void main(String[] args) {
         launch(args);
     }
