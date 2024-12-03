@@ -2,16 +2,20 @@ package com.example.parkinglotmanager;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Estacionamento {
     private Vaga[] vagas;
     private int totalClientes;
     private double totalFaturamento;
+    private List<Veiculo> veiculosQueSairam; // Lista para armazenar veículos que já saíram
 
     public Estacionamento(int totalVagas) {
         this.vagas = new Vaga[totalVagas];
         this.totalClientes = 0;
         this.totalFaturamento = 0.0;
+        this.veiculosQueSairam = new ArrayList<>(); // Inicializa a lista de veículos que saíram
         for (int i = 0; i < totalVagas; i++) {
             vagas[i] = new Vaga(i + 1); // Inicializa as vagas com números de 1 a totalVagas
         }
@@ -33,10 +37,11 @@ public class Estacionamento {
             if (vaga.isOcupada() && vaga.getVeiculo().getPlaca().equals(placa)) {
                 Veiculo veiculo = vaga.getVeiculo();
                 veiculo.registrarSaida(LocalDateTime.now());
-                long tempoPermanencia = calcularTempoPermanencia(vaga.getHoraEntrada());
+                long tempoPermanencia = calcularTempoPermanencia(veiculo.getEntrada());
                 double valorAPagar = calcularPagamento(tempoPermanencia);
                 totalFaturamento += valorAPagar;
                 vaga.liberar();
+                veiculosQueSairam.add(veiculo); // Adiciona o veículo à lista de veículos que saíram
                 System.out.println("Veículo " + placa + " saiu da vaga " + vaga.getNumero());
                 System.out.println("Tempo de permanência: " + tempoPermanencia + " minutos");
                 System.out.println("Valor a pagar: R$ " + valorAPagar);
@@ -70,5 +75,27 @@ public class Estacionamento {
             }
         }
         return null; // Retorna null se não houver vagas disponíveis
+    }
+
+    // Novo método para retornar todos os veículos que passaram pelo estacionamento
+    public List<Veiculo> getTodosOsVeiculos() {
+        List<Veiculo> todosOsVeiculos = new ArrayList<>();
+        // Adiciona os veículos atualmente estacionados
+        for (Vaga vaga : vagas) {
+            if (vaga.isOcupada()) {
+                todosOsVeiculos.add(vaga.getVeiculo());
+            }
+        }
+        // Adiciona os veículos que já saíram
+        todosOsVeiculos.addAll(veiculosQueSairam);
+        return todosOsVeiculos;
+    }
+
+    public double getTotalFaturamento() {
+        return totalFaturamento;
+    }
+
+    public int getTotalClientes() {
+        return totalClientes;
     }
 }

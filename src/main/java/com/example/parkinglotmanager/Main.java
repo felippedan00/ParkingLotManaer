@@ -203,30 +203,106 @@ public class Main extends Application {
 
     private void mostrarTelaResumo(Stage primaryStage) {
         Label labelResumo = new Label("Resumo de Faturamento");
+        Label labelPeriodo = new Label("Período:");
         Label labelNumeroClientes = new Label("Número de Clientes:");
         Label labelFaturamento = new Label("Faturamento:");
-        TextField campoClientes = new TextField(String.valueOf(totalClientes)); // Define o total de clientes
+
+        // Campos de texto para exibir resultados
+        TextField campoClientes = new TextField();
         campoClientes.setEditable(false); // Apenas leitura
-        TextField campoFaturamento = new TextField(String.format("R$ %.2f", totalFaturamento)); // Exibe o faturamento total
+        TextField campoFaturamento = new TextField();
         campoFaturamento.setEditable(false); // Apenas leitura
+
+        // ComboBox para selecionar o período
+        ComboBox<String> comboBoxPeriodo = new ComboBox<>();
+        comboBoxPeriodo.getItems().addAll("Semanal", "Mensal", "Trimestral", "Semestral", "Anual");
+        comboBoxPeriodo.setValue("Semanal"); // Valor padrão
+
+        Button btnCalcular = new Button("Calcular");
         Button btnVoltar = new Button("Voltar");
+
+        // Exibir valores totais no início
+        campoClientes.setText(String.valueOf(totalClientes)); // Total de clientes
+        campoFaturamento.setText(String.format("R$ %.2f", totalFaturamento)); // Total de faturamento
+
+        // Ação do botão calcular
+        btnCalcular.setOnAction(e -> {
+            String periodoSelecionado = comboBoxPeriodo.getValue();
+            LocalDateTime agora = LocalDateTime.now();
+
+            int numeroClientesPeriodo = calcularNumeroClientes(periodoSelecionado, agora);
+            double faturamentoPeriodo = calcularFaturamento(periodoSelecionado, agora);
+
+            campoClientes.setText(String.valueOf(numeroClientesPeriodo));
+            campoFaturamento.setText(String.format("R$ %.2f", faturamentoPeriodo));
+        });
+
+        // Layout da tela de resumo
+        VBox layoutResumo = new VBox(10, labelResumo, labelPeriodo, comboBoxPeriodo, btnCalcular,
+                labelNumeroClientes, campoClientes, labelFaturamento, campoFaturamento);
+        layoutResumo.setAlignment(Pos.CENTER);
 
         BorderPane layoutResumoTela = new BorderPane();
         layoutResumoTela.setTop(btnVoltar);
-        layoutResumoTela.setCenter(new VBox(10, labelResumo, labelNumeroClientes, campoClientes, labelFaturamento, campoFaturamento));
+        layoutResumoTela.setCenter(layoutResumo);
         BorderPane.setAlignment(btnVoltar, Pos.TOP_LEFT);
 
         Scene cenaResumo = new Scene(layoutResumoTela, 600, 400);
         primaryStage.setScene(cenaResumo);
 
+        // Ação do botão voltar
         btnVoltar.setOnAction(e -> primaryStage.setScene(cenaInicial));
+    }
+
+    private int calcularNumeroClientes(String periodo, LocalDateTime agora) {
+        int numeroClientes = 0;
+
+        for (Veiculo veiculo : estacionamento.getTodosOsVeiculos()) {
+            LocalDateTime entrada = veiculo.getEntrada();
+            if (pertenceAoPeriodo(entrada, periodo, agora)) {
+                numeroClientes++;
+            }
+        }
+
+        return numeroClientes;
+    }
+
+    private double calcularFaturamento(String periodo, LocalDateTime agora) {
+        double faturamento = 0.0;
+
+        for (Veiculo veiculo : estacionamento.getTodosOsVeiculos()) {
+            LocalDateTime entrada = veiculo.getEntrada();
+            if (pertenceAoPeriodo(entrada, periodo, agora)) {
+                faturamento += calcularPagamento(entrada);
+            }
+        }
+
+        return faturamento;
+    }
+
+    private boolean pertenceAoPeriodo(LocalDateTime entrada, String periodo, LocalDateTime agora) {
+        switch (periodo.toLowerCase()) {
+            case "semanal":
+                return entrada.isAfter(agora.minusWeeks(1));
+            case "mensal":
+                return entrada.isAfter(agora.minusMonths(1));
+            case "trimestral":
+                return entrada.isAfter(agora.minusMonths(3));
+            case "semestral":
+                return entrada.isAfter(agora.minusMonths(6));
+            case "anual":
+                return entrada.isAfter(agora.minusYears(1));
+            default:
+                return false;
+        }
     }
 
     private double calcularPagamento(LocalDateTime horaEntrada) {
         long segundos = Duration.between(horaEntrada, LocalDateTime.now()).getSeconds();
-        double taxaPorSegundo = 0.004; // Exemplo de taxa em reais por segundo
+        double taxaPorSegundo = 0.004; // Taxa em reais por segundo
         return segundos * taxaPorSegundo;
     }
+
 
     public static void main(String[] args) {
         launch(args);
